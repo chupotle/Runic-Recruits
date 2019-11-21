@@ -1,19 +1,30 @@
 {
-  "name": "hash",
+  "name": "runic-recruits",
   "version": "1.0.0",
-  "description": "See the various hash values of entered text",
-  "repository": "electron/simple-samples",
+  "description": "Allow community created leaderboards which can be joined through a room code. This room would contain a leaderboard that lists everyone in the lobby, and then tracks their future games towards that lobby",
   "main": "app.js",
   "scripts": {
-    "start": "electron app.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chupotle/Runic-Recruits.git"
+  },
+  "keywords": [
+    "LoR",
+    "Leaderboards",
+    "Community"
+  ],
+  "author": "Tim Chu, Imran Gosla",
   "license": "ISC",
-  "devDependencies": {
-    "electron": "^7.1.2"
+  "bugs": {
+    "url": "https://github.com/chupotle/Runic-Recruits/issues"
   },
+  "homepage": "https://github.com/chupotle/Runic-Recruits#readme",
   "dependencies": {
     "axios": "^0.19.0",
-    "firebase-admin": "^8.8.0",
-    "firebase-functions": "^3.3.0"
+    "express": "^4.17.1",
+    "firebase": "^7.4.0"
   }
 }
