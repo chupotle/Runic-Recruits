@@ -1,81 +1,85 @@
+const axios = require('axios')
+const {
+  setInterval
+} = require('timers');
+const admin = require("firebase-admin")
+const TEN_SECONDS = 10000;
+const ONE_SECOND = 1000;
+
 $(() => {
-  const crypto = require('crypto')
-  const axios = require('axios')
-  const TEN_SECONDS = 10000;
-  const ONE_SECONDS = 1000;
-  const TEEMO_CODE = '01PZ008';
+
   var fullGameState = {
-    currentDeck = "", /*null or (dictionary) */
-    gameState = "Menus", /*Menus or InProgress*/
-    currentUser = "", /*null or (username)*/
-    prevGameID = "",
-    GameID = "", /*-1 or (id)*/
-  }
+    var: currentDeck = "",
+    /*null or (dictionary) */
+    var: gameState = "Menus",
+    /*Menus or InProgress*/
+    var: currentUser = "",
+    /*null or (username)*/
+    var: prevGameID = "",
+    var: GameID = "",
+    /*-1 or (id)*/
+  };
   var validGame = false;
-  var recruitChallenge;
+  //have 3 teemos in your deck
+  var recruitChallenge = {
+    "01PZ008": 3
+  };
+  var losses = 0;
+  let serviceAccount = require("./runic-recruits-firebase-adminsdk-pu7aa-9d47160a11.json")
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  let firestore = admin.firestore();
+
+  mainLoop();
+
+  function updateUI() {
+    $('#current-user').text(fullGameState.currentUser)
+    $('#gameState').text(fullGameState.gameState)
+    $('#validGame').text(validGame)
+    $('#sha512-output').text(losses)
+  }
 
   function mainLoop() {
     // i think we want to constantly check for current user?
     // or maybe we just run this when we see a gamestate change
     getCurrentUser().then(data => {
-      currentUser = data ? data : currentUser;
+      fullGameState.currentUser = data ? data : fullGameState.currentUser;
     });
     // this should defo run all the time, or maybe we keep track of change
     // when we see gamestat
     updateGameState().then(data => {
-      gameState = data;
-    });
-    getActiveDeck().then(data => {
-      currentDeck = data;
-      validGame = checkRestrictions();
+      fullGameState.gameState = data;
     });
     getLastGameResult().then(data => {
+      if(!fullGameState.prevGameID){
+        return;
+      }
       // check if GameID changes, if it did, then it means a game has ended
-      if (data.GameID === fullGameState.GameID) {
+      if (data.GameID !== fullGameState.GameID) {
         fullGameState.prevGameID = fullGameState.GameID;
         fullGameState.GameID = data.GameID;
         // record game result
         if (validGame) {
-          if(data.LocalPlayerWon){
-            //send shit to db
-          }
+          let resultData = {
+            GameID: data.GameID,
+            Result: data.LocalPlayerWon
+          };
+
+          let setDoc = firestore.collection('Users')
+            .doc(fullGameState.PlayerName).collection('History');
+          setDoc.add(resultData).then(documentReference => {
+            updatePlayerWinLoss();
+          });
         }
       }
+      getActiveDeck().then(data => {
+        fullGameState.currentDeck = data;
+        validGame = checkRestrictions();
+      });
     });
+    updateUI();
   }
-
-
-
-
-
-
-
-
-
-
-  $('#text-input').bind('input propertychange', function () {
-
-    getActiveDeck().then(data => {
-      currentDeck = data;
-      $('#md5-output').text(currentDeck.DeckCode);
-
-
-      for (var key in currentDeck.CardsInDeck) {
-        $('#sha256-output').text(currentDeck.CardsInDeck[key])
-      }
-    });
-
-    //$('#sha1-output').text(sha1)
-    //myTimer();
-    //$('#sha256-output').text(sha256)
-    getCurrentUser().then(data => {
-      currentUser = data;
-      $('#sha512-output').text(currentUser);
-
-    });
-  })
-
-
 
   function getActiveDeck() {
     return axios.get('http://localhost:21337/static-decklist')
@@ -83,6 +87,46 @@ $(() => {
         return result.data.CardsInDeck;
       }).catch((err) => {
         return "F";
+      });
+  }
+
+  function updatePlayerWinLoss() {
+    if(!fullGameState.PlayerName){
+      return;
+    }
+    let userRef = firestore.collection("Users").doc(fullGameState.PlayerName);
+    let historyRef = userRef.collection("History");
+    historyRef.where('Result', '==', true).get()
+      .then(history => {
+        if (history.empty) {
+          console.log('No match history found');
+          return;
+        }
+
+        userRef.set({
+          Wins: snapshot.size
+        }, {
+          merge: true
+        });
+      })
+      .catch(err => {
+        console.log('Error getting documents', err);
+      });
+    historyRef.where('Result', '==', false).get()
+      .then(history => {
+        if (history.empty) {
+          console.log('No match history found');
+          return;
+        }
+
+        userRef.set({
+          Losses: history.size
+        }, {
+          merge: true
+        });
+      })
+      .catch(err => {
+        console.log('Error getting documents', err);
       });
   }
 
@@ -107,7 +151,7 @@ $(() => {
   function getLastGameResult() {
     return axios.get('http://localhost:21337/game-result')
       .then((result) => {
-        return result;
+        return result.data;
       }).catch((err) => {
         return "F";
       });
@@ -116,16 +160,22 @@ $(() => {
   function getRestrictionsForLobby() {
     // some call to sql db, expecting data to be returned as deck string, i.e.
     // {"01PZ001":3,"01PZ004":3}
+    // check user's groupid, and check that groupid's restrictions
   }
 
   function checkRestrictions() {
+    if (!fullGameState.currentDeck) {
+      return false;
+    }
     for (var card in recruitChallenge) {
-      if (currentDeck[card] < recruitChallenge[card]) {
+      console.log(fullGameState.currentDeck[card] + " " + recruitChallenge[card]);
+      if (fullGameState.currentDeck[card] < recruitChallenge[card]) {
         return false;
       }
     }
     return true;
   }
-  setInterval(mainLoop, ONE_SECONDS);
+  setInterval(mainLoop, ONE_SECOND*5);
+
   $('#text-input').focus() // focus input box
 })
