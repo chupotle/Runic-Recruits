@@ -173,11 +173,23 @@ function leaderboardUtil() {
 }
 
 function generateLeaderboard() {
+  let table = $('#leaderboard');
   //only check users with over # games
+  let order = 1;
   userColRef.orderBy('WeightedWL', 'desc').get().then(querySnapshot => {
     querySnapshot.forEach(documentSnapshot => {
-      console.log(`Found document at ${documentSnapshot.ref.path}`);
-      console.log(JSON.stringify(documentSnapshot.data()));
+      var docFields = documentSnapshot.data();
+
+      var sumName = documentSnapshot.id;
+      var cols = "";
+      cols += `<td>${order}</td>`;
+      cols += `<td>${sumName}</td>`;
+      cols += `<td>${(docFields.Winrate*100).toFixed(2)}\%</td>`;
+      order++;
+      
+      var newRow = $("<tr>");
+      newRow.append(cols);
+      table.append(newRow);
     });
   });
 }
@@ -216,5 +228,5 @@ async function mainLoop() {
   }
 }
 updatePlayerWinLoss();
-generateLeaderboard();
+setTimeout(generateLeaderboard, ONE_SECOND);
 //setInterval(mainLoop, ONE_SECOND * 5);
