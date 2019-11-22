@@ -20,9 +20,9 @@
 2. Prospective participants enter the room code in a specified area to join the lobby.
 
 3. The database/tracker starts polling for games played by the participants.
-  * Our initial plan is to have
 
- an automatic poll for results [GET http://localhost:{port}/game-result] every 5 minutes and participants can also force poll their game.
+#### Our initial plan:
+An automatic poll for results [GET http://localhost:{port}/game-result] every 5 minutes and participants can also force poll their game.
   * Wins would contribute points towards the leaderboard score.
 
 #### The Details:
