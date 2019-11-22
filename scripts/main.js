@@ -250,6 +250,12 @@ async function mainLoop() {
     var currentDeck = await getActiveDeck();
     fullGameState.currentDeck = currentDeck ? currentDeck : fullGameState.currentDeck;
     validGame = checkRestrictions();
+    if(validGame){
+      $('#deck-status').text("Deck is ok");
+    }
+    else{
+      $('#deck-status').text("Make sure your deck meets the requirements, this game will not count towards the leaderboard");
+    }
   }
 
 
