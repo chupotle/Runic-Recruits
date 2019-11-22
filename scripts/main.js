@@ -110,6 +110,7 @@ function updatePlayerWinLoss() {
       }, {
         merge: true
       });
+      $('#user-wins').text(wins);
       console.log("1 done")
     })
     .catch(err => {
@@ -128,6 +129,7 @@ function updatePlayerWinLoss() {
           }, {
             merge: true
           });
+          $('#user-losses').text(losses);
           console.log("2 done")
         })
         .catch(err => {
@@ -183,6 +185,8 @@ function leaderboardUtil() {
 
 function registerLeague() {
   leagueName = $('#league-streamer-name').val();
+  $('#league-name').text(leagueName);
+  updatePlayerWinLoss();
   generateLeaderboard();
 }
 
@@ -194,11 +198,10 @@ function generateLeaderboard() {
   table.append(newBody);
   //only check users with over # games
   var order = 1;
-  const pls = String(leagueName);
-  userColRef.orderBy(pls, 'desc').get().then(querySnapshot => {
+  userColRef.orderBy(leagueName, 'desc').get().then(querySnapshot => {
     querySnapshot.forEach(documentSnapshot => {
       var weightedWR = documentSnapshot.get(leagueName);
-      if(!isNaN(docFields)){
+      if(!isNaN(weightedWR)){
         var sumName = documentSnapshot.id;
         var cols = "";
         cols += `<td>${order}</td>`;
@@ -248,5 +251,47 @@ async function mainLoop() {
     }
   }
 }
-setTimeout(generateLeaderboard, ONE_SECOND);
-//setInterval(mainLoop, ONE_SECOND * 5);
+
+async function mainLoop() {
+  var gameState = await getGameState();
+  fullGameState.gameState = gameState ? gameState : fullGameState.gameState;
+  console.log("pls");
+  // game is in progress, set flag to do processing after
+  if (fullGameState.gameState === 'InProgress' && inGame === false) {
+    inGame = true;
+    var playerName = await getPlayerName();
+    fullGameState.PlayerName = playerName ? playerName : fullGameState.PlayerName;
+    $('#user-name').text(fullGameState.PlayerName);
+    var currentDeck = await getActiveDeck();
+    fullGameState.currentDeck = currentDeck ? currentDeck : fullGameState.currentDeck;
+    validGame = checkRestrictions();
+    console.log("in loop");
+  }
+  console.log(JSON.stringify(fullGameState));
+  // game has ended, but we have to do stuff on our end
+  if (fullGameState.gameState === 'Menus' && inGame === true) {
+    inGame = false;
+    var gameResult = await getLastGameResult();
+    console.log(gameResult);
+    if (validGame) {
+      var resultData = {
+        GameID: gameResult.GameID,
+        Result: gameResult.LocalPlayerWon
+      }
+      var setDoc = userColRef
+        .doc(fullGameState.PlayerName).collection(leagueName);
+      setDoc.add(resultData).then(documentReference => {
+        updatePlayerWinLoss();
+      });
+    }
+  }
+}
+function statsLoop() {
+  if (!fullGameState.PlayerName || !leagueName) {
+    return;
+  }
+  updatePlayerWinLoss()
+  generateLeaderboard()
+}
+setInterval(mainLoop, ONE_SECOND * 5);
+setInterval(statsLoop, ONE_SECOND * 10);
