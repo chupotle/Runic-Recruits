@@ -1,6 +1,6 @@
 # Runic-Recruits
 
-## Idea: Runic Recruits - Twitch Integrated “Ladder/Tourney” System.
+## Idea: Runic Recruits - Twitch Integrated “Community Challenge” System.
 
 ### Purpose and Focus:
 >Our main focus with the implementation of this feature is for streamers, content creators, or even a group of friends to make a community-based leaderboard to engage in friendly competition. This is not a replacement for a ranking ladder, but rather a casual competition.
