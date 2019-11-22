@@ -27,7 +27,11 @@
 Install the latest Node.js 12+ LTS version.
 
 After Node has been installed, cd to the cloned directory and run:
-```npm install```
+```
+npm install
+```
 
 To run the application:
-```npm start```
+```
+npm start
+```
