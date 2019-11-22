@@ -5,7 +5,32 @@ const {
 const admin = require('firebase-admin');
 const TEN_SECONDS = 10000;
 const ONE_SECOND = 1000;
-
+const champList = {
+  "01FR024":"Anivia",
+  "01FR038":"Ashe",
+  "01FR009":"Braum",
+  "01NX038":"Darius",
+  "01NX020":"Draven",
+  "01SI053":"Elise",
+  "01PZ036":"Ezreal",
+  "01DE045":"Fiora",
+  "01DE012":"Garen",
+  "01SI042":"Hecarim",
+  "01PZ056":"Heimerdinger",
+  "01PZ040":"Jinx",
+  "01SI030":"Kalista",
+  "01IO041":"Karma",
+  "01NX042":"Katarina",
+  "01DE022":"Lucian",
+  "01DE042":"Lux",
+  "01IO032":"Shen",
+  "01PZ008":"Teemo",
+  "01SI052":"Thresh",
+  "01FR039":"Tryndamere",
+  "01NX006":"Vladimir",
+  "01IO015":"Yasuo",
+  "01IO009":"Zed"
+};
 
 var serviceAccount = require("./runic-recruits-429d1-firebase-adminsdk-haua1-96f92923b3.json")
 admin.initializeApp({
@@ -16,9 +41,8 @@ admin.initializeApp({
 var firestore = admin.firestore();
 var userColRef = firestore.collection('Users');
 var leagueColRef = firestore.collection('Leagues');
-var leagueName = "scarra";
+var leagueName = "";
 var inGame = false;
-
 
 
 var fullGameState = {
@@ -26,7 +50,7 @@ var fullGameState = {
   /*null or (dictionary) */
   gameState: "",
   /*Menus or InProgress*/
-  PlayerName: "Chuuu",
+  PlayerName: "",
   /*null or (username)*/
   prevGameID: "",
   GameID: "",
@@ -41,7 +65,6 @@ var recruitChallenge = {
 async function getPlayerName() {
   try {
     const response = await axios.get('http://localhost:21337/positional-rectangles');
-    console.log(response.data);
     return response.data.PlayerName;
   } catch (error) {
     console.error(error);
@@ -51,8 +74,7 @@ async function getPlayerName() {
 async function getActiveDeck() {
   try {
     const response = await axios.get('http://localhost:21337/static-decklist');
-    console.log(response.data);
-    return response.data;
+    return response.data.CardsInDeck;
   } catch (error) {
     console.error(error);
   }
@@ -61,7 +83,6 @@ async function getActiveDeck() {
 async function getGameState() {
   try {
     const response = await axios.get('http://localhost:21337/positional-rectangles');
-    console.log(response.data.GameState);
     return response.data.GameState;
   } catch (error) {
     console.error(error);
@@ -71,20 +92,24 @@ async function getGameState() {
 async function getLastGameResult() {
   try {
     const response = await axios.get('http://localhost:21337/game-result');
-    console.log(response.data);
     return response.data;
   } catch (error) {
     console.error(error);
   }
 }
 
+function activeUser() {
+  return !!fullGameState.PlayerName
+}
+
 function checkRestrictions() {
-  if (!fullGameState.currentDeck) {
+  if (!activeUser()) {
     return false;
   }
   for (var card in recruitChallenge) {
-    console.log(fullGameState.currentDeck[card] + " " + recruitChallenge[card]);
-    if (fullGameState.currentDeck[card] < recruitChallenge[card]) {
+    let ourDeck = fullGameState.currentDeck[card];
+    let targetDeck = recruitChallenge[card];
+    if (isNaN(ourDeck) || ourDeck < targetDeck) {
       return false;
     }
   }
@@ -92,7 +117,7 @@ function checkRestrictions() {
 }
 
 function updatePlayerWinLoss() {
-  if (!fullGameState.PlayerName) {
+  if (!activeUser()) {
     return;
   }
   var userRef = userColRef.doc(fullGameState.PlayerName);
@@ -100,7 +125,6 @@ function updatePlayerWinLoss() {
   var leagueStatRef = historyRef.doc("leagueStats");
   historyRef.where('Result', '==', true).get()
     .then(history => {
-      console.log("1")
       let wins = 0;
       if (!history.empty) {
         wins = history.size;
@@ -111,7 +135,6 @@ function updatePlayerWinLoss() {
         merge: true
       });
       $('#user-wins').text(wins);
-      console.log("1 done")
     })
     .catch(err => {
       console.log('Error getting documents', err);
@@ -119,7 +142,6 @@ function updatePlayerWinLoss() {
     .finally(lul => {
       historyRef.where('Result', '==', false).get()
         .then(history => {
-          console.log("2")
           let losses = 0;
           if (!history.empty) {
             losses = history.size;
@@ -130,7 +152,6 @@ function updatePlayerWinLoss() {
             merge: true
           });
           $('#user-losses').text(losses);
-          console.log("2 done")
         })
         .catch(err => {
           console.log('Error getting documents', err);
@@ -142,7 +163,7 @@ function updatePlayerWinLoss() {
 }
 
 function leaderboardUtil() {
-  if (!fullGameState.PlayerName) {
+  if (!activeUser()) {
     return;
   }
   var userRef = userColRef.doc(fullGameState.PlayerName);
@@ -150,9 +171,7 @@ function leaderboardUtil() {
   var leagueStatRef = historyRef.doc("leagueStats");
   leagueStatRef.get()
     .then(userDoc => {
-      console.log("3")
       if (userDoc.empty) {
-        console.log('No match history found');
         return;
       }
       var data = userDoc.data();
@@ -176,18 +195,18 @@ function leaderboardUtil() {
       }, {
         merge: true
       });
-      console.log("3 done")
     })
     .catch(err => {
-      console.log('Error getting documents', err);
     });
 }
 
 function registerLeague() {
-  leagueName = $('#league-streamer-name').val();
-  $('#league-name').text(leagueName);
+  leagueName = $('#league-streamer-name').val().toLowerCase();;
+  $('#league-name').text(leagueName+"'s ");
   updatePlayerWinLoss();
   generateLeaderboard();
+  getChallenge();
+  inGame = false;
 }
 
 function generateLeaderboard() {
@@ -201,7 +220,7 @@ function generateLeaderboard() {
   userColRef.orderBy(leagueName, 'desc').get().then(querySnapshot => {
     querySnapshot.forEach(documentSnapshot => {
       var weightedWR = documentSnapshot.get(leagueName);
-      if(!isNaN(weightedWR)){
+      if(!isNaN(weightedWR) && weightedWR >= 0){
         var sumName = documentSnapshot.id;
         var cols = "";
         cols += `<td>${order}</td>`;
@@ -220,24 +239,24 @@ function generateLeaderboard() {
 async function mainLoop() {
   var gameState = await getGameState();
   fullGameState.gameState = gameState ? gameState : fullGameState.gameState;
-  console.log("pls");
+
+
   // game is in progress, set flag to do processing after
   if (fullGameState.gameState === 'InProgress' && inGame === false) {
     inGame = true;
-    var playerName = await getPlayerName();
+    var playerName = (await getPlayerName()).toLowerCase();
     fullGameState.PlayerName = playerName ? playerName : fullGameState.PlayerName;
     $('#user-name').text(fullGameState.PlayerName);
     var currentDeck = await getActiveDeck();
     fullGameState.currentDeck = currentDeck ? currentDeck : fullGameState.currentDeck;
     validGame = checkRestrictions();
-    console.log("in loop");
   }
-  console.log(JSON.stringify(fullGameState));
+
+
   // game has ended, but we have to do stuff on our end
   if (fullGameState.gameState === 'Menus' && inGame === true) {
     inGame = false;
     var gameResult = await getLastGameResult();
-    console.log(gameResult);
     if (validGame) {
       var resultData = {
         GameID: gameResult.GameID,
@@ -252,46 +271,65 @@ async function mainLoop() {
   }
 }
 
-async function mainLoop() {
-  var gameState = await getGameState();
-  fullGameState.gameState = gameState ? gameState : fullGameState.gameState;
-  console.log("pls");
-  // game is in progress, set flag to do processing after
-  if (fullGameState.gameState === 'InProgress' && inGame === false) {
-    inGame = true;
-    var playerName = await getPlayerName();
-    fullGameState.PlayerName = playerName ? playerName : fullGameState.PlayerName;
-    $('#user-name').text(fullGameState.PlayerName);
-    var currentDeck = await getActiveDeck();
-    fullGameState.currentDeck = currentDeck ? currentDeck : fullGameState.currentDeck;
-    validGame = checkRestrictions();
-    console.log("in loop");
-  }
-  console.log(JSON.stringify(fullGameState));
-  // game has ended, but we have to do stuff on our end
-  if (fullGameState.gameState === 'Menus' && inGame === true) {
-    inGame = false;
-    var gameResult = await getLastGameResult();
-    console.log(gameResult);
-    if (validGame) {
-      var resultData = {
-        GameID: gameResult.GameID,
-        Result: gameResult.LocalPlayerWon
-      }
-      var setDoc = userColRef
-        .doc(fullGameState.PlayerName).collection(leagueName);
-      setDoc.add(resultData).then(documentReference => {
-        updatePlayerWinLoss();
-      });
-    }
-  }
+function populateDropdown(){
+  let dropdown = $('#challenge-champ');
+  dropdown.empty();
+  dropdown.append('<option selected="true" disabled>Choose a Champion</option>');
+  dropdown.prop('selectedIndex', 0);
+  const url = './IdToChamps.json';
+  $.getJSON(url, function (data) {
+    $.each(data, function (key, entry) {
+      dropdown.append($('<option></option>').attr('value', key).text(entry));
+    })
+  });
 }
+
+function saveChallenge() {
+  var champId = $("#challenge-champ option:selected").val();
+  recruitChallenge = {[champId] : 3};
+  var setDoc = leagueColRef
+    .doc(fullGameState.PlayerName);
+  setDoc.set({
+    RecruitChallenge: recruitChallenge
+  });
+}
+
+function getChallenge() {
+  if(!leagueName){
+    return;
+  }
+  leagueColRef
+    .doc(leagueName).get().then(leagueInfo => {
+      recruitChallenge = leagueInfo.data().RecruitChallenge;
+    })
+    .catch(error => {
+
+    })
+    .finally(idk => {
+      genChallengeText();
+    });
+}
+
+
+function genChallengeText() {
+  var challengeStr = "Play ";
+  for(champ in recruitChallenge){
+    challengeStr += `${recruitChallenge[champ]} ${champList[champ]}s `
+  }
+  challengeStr += "in your deck to compete in this challenge"
+  $("#challenge-string").text(challengeStr);
+}
+
+
 function statsLoop() {
-  if (!fullGameState.PlayerName || !leagueName) {
+  if (!activeUser() || !leagueName) {
     return;
   }
   updatePlayerWinLoss()
   generateLeaderboard()
 }
+
+populateDropdown();
 setInterval(mainLoop, ONE_SECOND * 5);
-setInterval(statsLoop, ONE_SECOND * 10);
+setInterval(statsLoop, ONE_SECOND * 5);
+setTimeout(populateDropdown, ONE_SECOND*2);
