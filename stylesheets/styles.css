@@ -10,6 +10,12 @@
 .jumbotron {
     max-height: 20em;
 }
+
 .card {
     min-width: 20em;
+    margin: 5%;
+}
+
+.custom-select {
+    margin-bottom: 5px;
 }
