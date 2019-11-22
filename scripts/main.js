@@ -26,7 +26,7 @@ var fullGameState = {
   /*null or (dictionary) */
   gameState: "",
   /*Menus or InProgress*/
-  PlayerName: "",
+  PlayerName: "Veelox",
   /*null or (username)*/
   prevGameID: "",
   GameID: "",
@@ -92,7 +92,6 @@ function checkRestrictions() {
 }
 
 function updatePlayerWinLoss() {
-  fullGameState.PlayerName = 'VeeIox'
   if (!fullGameState.PlayerName) {
     return;
   }
@@ -100,38 +99,53 @@ function updatePlayerWinLoss() {
   var historyRef = userRef.collection("History");
   historyRef.where('Result', '==', true).get()
     .then(history => {
-      if (history.empty) {
-        console.log('No match history found');
-        return;
+      console.log("1")
+      let wins = 0;
+      if (!history.empty) {
+        wins = history.size;
       }
-
       userRef.set({
-        Wins: history.size
+        Wins: wins
       }, {
         merge: true
       });
+      console.log("1 done")
     })
     .catch(err => {
       console.log('Error getting documents', err);
+    })
+    .finally(lul => {
+      historyRef.where('Result', '==', false).get()
+        .then(history => {
+          console.log("2")
+          let losses = 0;
+          if (!history.empty) {
+            losses = history.size;
+          }
+          userRef.set({
+            Losses: losses
+          }, {
+            merge: true
+          });
+          console.log("2 done")
+        })
+        .catch(err => {
+          console.log('Error getting documents', err);
+        })
+        .finally(KEKW => {
+          leaderboardUtil();
+        });
     });
-  historyRef.where('Result', '==', false).get()
-    .then(history => {
-      if (history.empty) {
-        console.log('No match history found');
-        return;
-      }
+}
 
-      userRef.set({
-        Losses: history.size
-      }, {
-        merge: true
-      });
-    })
-    .catch(err => {
-      console.log('Error getting documents', err);
-    });
+function leaderboardUtil() {
+  if (!fullGameState.PlayerName) {
+    return;
+  }
+  var userRef = userColRef.doc(fullGameState.PlayerName);
   userRef.get()
     .then(userDoc => {
+      console.log("3")
       if (userDoc.empty) {
         console.log('No match history found');
         return;
@@ -139,7 +153,11 @@ function updatePlayerWinLoss() {
       var data = userDoc.data();
       var totalGames = data.Wins + data.Losses;
       var winLoss = data.Wins / totalGames;
-      var weightedRatio = winLoss + totalGames/1000000
+      var weightedRatio = -1;
+      if (totalGames > 5) {
+        var weightedRatio = parseFloat(winLoss.toFixed(4)) + totalGames / 100000000
+      }
+
       userRef.set({
         Winrate: winLoss,
         Games: totalGames,
@@ -147,6 +165,7 @@ function updatePlayerWinLoss() {
       }, {
         merge: true
       });
+      console.log("3 done")
     })
     .catch(err => {
       console.log('Error getting documents', err);
@@ -155,24 +174,12 @@ function updatePlayerWinLoss() {
 
 function generateLeaderboard() {
   //only check users with over # games
-  var query = userColRef.where('Games', '>', 0);
-  userColRef.orderBy('Games', 'desc').get().then(querySnapshot => {
+  userColRef.orderBy('WeightedWL', 'desc').get().then(querySnapshot => {
     querySnapshot.forEach(documentSnapshot => {
       console.log(`Found document at ${documentSnapshot.ref.path}`);
+      console.log(JSON.stringify(documentSnapshot.data()));
     });
   });
-  // userColRef.listDocuments().then(userDocRefs => {
-  //     return firestore.getAll(...userDocRefs);
-  //  }).then(userDocs => {
-  //     for (let userDoc of userDocs) {
-  //        if (userDoc.exists) {
-  //          console.log(`Found document with data: ${userDoc.id}`);
-  //        } else {
-  //          console.log(`Found missing document: ${userDoc.id}`);
-  //        }  
-  //     }
-  //  });
-
 }
 
 async function mainLoop() {
