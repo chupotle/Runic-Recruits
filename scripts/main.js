@@ -105,7 +105,44 @@ function updatePlayerWinLoss() {
       }
 
       userRef.set({
-        Wins: snapshot.size
+        Wins: history.size
+      }, {
+        merge: true
+      });
+    })
+    .catch(err => {
+      console.log('Error getting documents', err);
+    });
+  historyRef.where('Result', '==', false).get()
+    .then(history => {
+      if (history.empty) {
+        console.log('No match history found');
+        return;
+      }
+
+      userRef.set({
+        Losses: history.size
+      }, {
+        merge: true
+      });
+    })
+    .catch(err => {
+      console.log('Error getting documents', err);
+    });
+}
+
+function updatePlayerWinLoss() {
+  var userRef = userColRef.doc(fullGameState.PlayerName);
+  var historyRef = userRef.collection("History");
+  historyRef.where('Result', '==', true).get()
+    .then(history => {
+      if (history.empty) {
+        console.log('No match history found');
+        return;
+      }
+
+      userRef.set({
+        Wins: history.size
       }, {
         merge: true
       });
@@ -132,17 +169,6 @@ function updatePlayerWinLoss() {
 }
 
 async function mainLoop() {
-  //while app is open
-  //check if game is in progress
-  //if game in progress
-  //get username
-  //check if username exists in db
-  //if it doesnt, push new entry to db
-  //if it does, get db entry ref
-  //check until game is done (not in progress)
-  //update win/loss
-
-
   var gameState = await getGameState();
   fullGameState.gameState = gameState ? gameState : fullGameState.gameState;
   console.log("pls");
@@ -173,7 +199,6 @@ async function mainLoop() {
         updatePlayerWinLoss();
       });
     }
-
   }
 }
 
