@@ -13,9 +13,9 @@ admin.initializeApp({
   databaseURL: "https://runic-recruits-429d1.firebaseio.com"
 });
 
-var firebase = admin.firestore();
-var userColRef = firebase.collection('Users');
-var leagueColRef = firebase.collection('Leagues');
+var firestore = admin.firestore();
+var userColRef = firestore.collection('Users');
+var leagueColRef = firestore.collection('Leagues');
 
 var inGame = false;
 
@@ -92,6 +92,7 @@ function checkRestrictions() {
 }
 
 function updatePlayerWinLoss() {
+  fullGameState.PlayerName = 'VeeIox'
   if (!fullGameState.PlayerName) {
     return;
   }
@@ -129,43 +130,49 @@ function updatePlayerWinLoss() {
     .catch(err => {
       console.log('Error getting documents', err);
     });
+  userRef.get()
+    .then(userDoc => {
+      if (userDoc.empty) {
+        console.log('No match history found');
+        return;
+      }
+      var data = userDoc.data();
+      var totalGames = data.Wins + data.Losses;
+      var winLoss = data.Wins / totalGames;
+      var weightedRatio = winLoss + totalGames/1000000
+      userRef.set({
+        Winrate: winLoss,
+        Games: totalGames,
+        WeightedWL: weightedRatio
+      }, {
+        merge: true
+      });
+    })
+    .catch(err => {
+      console.log('Error getting documents', err);
+    });
 }
 
-function updatePlayerWinLoss() {
-  var userRef = userColRef.doc(fullGameState.PlayerName);
-  var historyRef = userRef.collection("History");
-  historyRef.where('Result', '==', true).get()
-    .then(history => {
-      if (history.empty) {
-        console.log('No match history found');
-        return;
-      }
-
-      userRef.set({
-        Wins: history.size
-      }, {
-        merge: true
-      });
-    })
-    .catch(err => {
-      console.log('Error getting documents', err);
+function generateLeaderboard() {
+  //only check users with over # games
+  var query = userColRef.where('Games', '>', 0);
+  userColRef.orderBy('Games', 'desc').get().then(querySnapshot => {
+    querySnapshot.forEach(documentSnapshot => {
+      console.log(`Found document at ${documentSnapshot.ref.path}`);
     });
-  historyRef.where('Result', '==', false).get()
-    .then(history => {
-      if (history.empty) {
-        console.log('No match history found');
-        return;
-      }
+  });
+  // userColRef.listDocuments().then(userDocRefs => {
+  //     return firestore.getAll(...userDocRefs);
+  //  }).then(userDocs => {
+  //     for (let userDoc of userDocs) {
+  //        if (userDoc.exists) {
+  //          console.log(`Found document with data: ${userDoc.id}`);
+  //        } else {
+  //          console.log(`Found missing document: ${userDoc.id}`);
+  //        }  
+  //     }
+  //  });
 
-      userRef.set({
-        Losses: history.size
-      }, {
-        merge: true
-      });
-    })
-    .catch(err => {
-      console.log('Error getting documents', err);
-    });
 }
 
 async function mainLoop() {
@@ -201,5 +208,6 @@ async function mainLoop() {
     }
   }
 }
-
-setInterval(mainLoop, ONE_SECOND * 5);
+updatePlayerWinLoss();
+generateLeaderboard();
+//setInterval(mainLoop, ONE_SECOND * 5);
