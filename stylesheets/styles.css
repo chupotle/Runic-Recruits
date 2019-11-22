@@ -1,0 +1,15 @@
+.content {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    justify-content: space-evenly;
+
+  }
+
+
+.jumbotron {
+    max-height: 20em;
+}
+.card {
+    min-width: 20em;
+}
