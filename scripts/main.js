@@ -16,7 +16,7 @@ admin.initializeApp({
 var firestore = admin.firestore();
 var userColRef = firestore.collection('Users');
 var leagueColRef = firestore.collection('Leagues');
-
+var leagueName = "scarra";
 var inGame = false;
 
 
@@ -26,7 +26,7 @@ var fullGameState = {
   /*null or (dictionary) */
   gameState: "",
   /*Menus or InProgress*/
-  PlayerName: "Veelox",
+  PlayerName: "Chuuu",
   /*null or (username)*/
   prevGameID: "",
   GameID: "",
@@ -96,7 +96,8 @@ function updatePlayerWinLoss() {
     return;
   }
   var userRef = userColRef.doc(fullGameState.PlayerName);
-  var historyRef = userRef.collection("History");
+  var historyRef = userRef.collection(leagueName);
+  var leagueStatRef = historyRef.doc("leagueStats");
   historyRef.where('Result', '==', true).get()
     .then(history => {
       console.log("1")
@@ -104,7 +105,7 @@ function updatePlayerWinLoss() {
       if (!history.empty) {
         wins = history.size;
       }
-      userRef.set({
+      leagueStatRef.set({
         Wins: wins
       }, {
         merge: true
@@ -122,7 +123,7 @@ function updatePlayerWinLoss() {
           if (!history.empty) {
             losses = history.size;
           }
-          userRef.set({
+          leagueStatRef.set({
             Losses: losses
           }, {
             merge: true
@@ -133,7 +134,7 @@ function updatePlayerWinLoss() {
           console.log('Error getting documents', err);
         })
         .finally(KEKW => {
-          leaderboardUtil();
+          setTimeout(leaderboardUtil, ONE_SECOND*5);
         });
     });
 }
@@ -143,7 +144,9 @@ function leaderboardUtil() {
     return;
   }
   var userRef = userColRef.doc(fullGameState.PlayerName);
-  userRef.get()
+  var historyRef = userRef.collection(leagueName);
+  var leagueStatRef = historyRef.doc("leagueStats");
+  leagueStatRef.get()
     .then(userDoc => {
       console.log("3")
       if (userDoc.empty) {
@@ -158,10 +161,16 @@ function leaderboardUtil() {
         var weightedRatio = parseFloat(winLoss.toFixed(4)) + totalGames / 100000000
       }
 
-      userRef.set({
+      leagueStatRef.set({
         Winrate: winLoss,
         Games: totalGames,
         WeightedWL: weightedRatio
+      }, {
+        merge: true
+      });
+      
+      userRef.set({
+        [leagueName]: weightedRatio
       }, {
         merge: true
       });
@@ -172,24 +181,35 @@ function leaderboardUtil() {
     });
 }
 
+function registerLeague() {
+  leagueName = $('#league-streamer-name').val();
+  generateLeaderboard();
+}
+
 function generateLeaderboard() {
   let table = $('#leaderboard');
+  $("#leaderboard tbody").empty();
+  
+  var newBody = $("<tbody id='leaderboardBody'>");
+  table.append(newBody);
   //only check users with over # games
-  let order = 1;
-  userColRef.orderBy('WeightedWL', 'desc').get().then(querySnapshot => {
+  var order = 1;
+  const pls = String(leagueName);
+  userColRef.orderBy(pls, 'desc').get().then(querySnapshot => {
     querySnapshot.forEach(documentSnapshot => {
-      var docFields = documentSnapshot.data();
-
-      var sumName = documentSnapshot.id;
-      var cols = "";
-      cols += `<td>${order}</td>`;
-      cols += `<td>${sumName}</td>`;
-      cols += `<td>${(docFields.Winrate*100).toFixed(2)}\%</td>`;
-      order++;
-      
-      var newRow = $("<tr>");
-      newRow.append(cols);
-      table.append(newRow);
+      var weightedWR = documentSnapshot.get(leagueName);
+      if(!isNaN(docFields)){
+        var sumName = documentSnapshot.id;
+        var cols = "";
+        cols += `<td>${order}</td>`;
+        cols += `<td>${sumName}</td>`;
+        cols += `<td>${(weightedWR*100).toFixed(2)}\%</td>`;
+        order++;
+        
+        var newRow = $("<tr>");
+        newRow.append(cols);
+        newBody.append(newRow);
+      }
     });
   });
 }
@@ -203,6 +223,7 @@ async function mainLoop() {
     inGame = true;
     var playerName = await getPlayerName();
     fullGameState.PlayerName = playerName ? playerName : fullGameState.PlayerName;
+    $('#user-name').text(fullGameState.PlayerName);
     var currentDeck = await getActiveDeck();
     fullGameState.currentDeck = currentDeck ? currentDeck : fullGameState.currentDeck;
     validGame = checkRestrictions();
@@ -220,13 +241,12 @@ async function mainLoop() {
         Result: gameResult.LocalPlayerWon
       }
       var setDoc = userColRef
-        .doc(fullGameState.PlayerName).collection('History');
+        .doc(fullGameState.PlayerName).collection(leagueName);
       setDoc.add(resultData).then(documentReference => {
         updatePlayerWinLoss();
       });
     }
   }
 }
-updatePlayerWinLoss();
 setTimeout(generateLeaderboard, ONE_SECOND);
 //setInterval(mainLoop, ONE_SECOND * 5);

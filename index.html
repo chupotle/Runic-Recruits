@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,8 @@
     <title>Runic Recruits</title>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T">
     <link rel="stylesheet" href="./stylesheets/styles.css">
 
 
@@ -17,52 +19,55 @@
     </script>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>    <script src="./scripts/main.js" charset="utf-8"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous">
+    </script>
+    <script src="./scripts/main.js" charset="utf-8"></script>
 
 </head>
+
 <body>
     <div class="jumbotron">
         <h1 class="display-4">Runic Recruits</h1>
         <hr class="my-4">
         <p class="lead">Insert Slogan Here</p>
     </div>
-<div class="content">
-    <div class="card">
-        <h5 class="card-header">The League</h5>
-        <div class="card-body">
-            <table id="leaderboard" class="table">
-                <thead>
-                  <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Summoner Name</th>
-                    <th scope="col">Winrate</th>
-                  </tr>
-                </thead>
-              </table>
-        </div>
-    </div>
+    <div class="content">
+        <div class="card">
+            <h5 class="card-header">How You're Doing</h5>
+            <div class="card-body">
+                <h5 class="card-title">Your Stats</h5>
+                <p id="user-name" class="card-text"></p>
+                <p id="user-wins" class="card-text"></p>
+                <p id="user-losses" class="card-text"></p>
+                <p id="user-league" class="card-text"></p>
+                <div class="form-group">
+                    <!-- insert list here -->
+                    <h5 class="card-text">Want to join a league?</h5>
+                    <!-- insert list here -->
 
-    <div class="card">
-        <h5 class="card-header">How You're Doing</h5>
-        <div class="card-body">
-            <h5 class="card-title">Your Stats</h5>
-            <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
-            <div class="form-group">
-                <!-- insert list here -->
-                <h5 class="card-text">Want to join a league?</h5>
-                <!-- insert list here -->
-
-                <label for="league-streamer-name">Streamer Name</label>
-                <input class="form-control form-control-sm" type="text" placeholder="imaqtpie">
+                    <label>Streamer Name</label>
+                    <input id="league-streamer-name" class="form-control form-control-sm" type="text" placeholder="imaqtpie">
+                </div>
+                <button onclick="registerLeague()" type="submit" class="btn btn-outline-primary btn-sm">Submit</button>
             </div>
-            <button type="submit" class="btn btn-outline-primary btn-sm">Submit</button>
+        </div>
+
+        <div class="card">
+            <h5 class="card-header">The League</h5>
+            <div class="card-body">
+                <table id="leaderboard" class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Summoner Name</th>
+                            <th scope="col">Winrate</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
         </div>
     </div>
-
-</div>
-    
-
-
-
 </body>
+
 </html>
